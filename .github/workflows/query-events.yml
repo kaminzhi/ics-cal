@@ -1,0 +1,54 @@
+name: Query Events API
+
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "Year to query, e.g. 2025"
+        required: true
+        type: string
+      query:
+        description: "Keyword to search, e.g. 暑假"
+        required: true
+        type: string
+
+jobs:
+  query:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Run query
+        id: run
+        run: |
+          ics-cal --year "${{ inputs.year }}" --query "${{ inputs.query }}" --json > result.json
+          echo "json=$(cat result.json | tr '\n' ' ' | sed 's/\r//g')" >> $GITHUB_OUTPUT
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: query-result
+          path: result.json
+
+      - name: Set job summary
+        run: |
+          echo "### Query Result" >> $GITHUB_STEP_SUMMARY
+          echo "Year: ${{ inputs.year }}" >> $GITHUB_STEP_SUMMARY
+          echo "Query: ${{ inputs.query }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '\`\`\`json' >> $GITHUB_STEP_SUMMARY
+          cat result.json >> $GITHUB_STEP_SUMMARY
+          echo '\`\`\`' >> $GITHUB_STEP_SUMMARY
+
+
